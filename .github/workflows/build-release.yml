@@ -1,0 +1,149 @@
+name: Build and Release macOS App
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  build-macos:
+    name: Build macOS Application
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install deepgram-sdk pyside6 python-dotenv pyinstaller
+
+      - name: Build macOS app with PyInstaller
+        run: |
+          pyinstaller AudioTranscription.spec
+
+      - name: Create DMG installer
+        run: |
+          # Install create-dmg
+          brew install create-dmg
+
+          # Create DMG
+          create-dmg \
+            --volname "Audio Transcription" \
+            --volicon "dist/AudioTranscription.app/Contents/Resources/icon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "AudioTranscription.app" 200 190 \
+            --hide-extension "AudioTranscription.app" \
+            --app-drop-link 600 185 \
+            --no-internet-enable \
+            "AudioTranscription-macOS.dmg" \
+            "dist/AudioTranscription.app" || true
+
+          # Fallback: If create-dmg fails, create a simple DMG
+          if [ ! -f "AudioTranscription-macOS.dmg" ]; then
+            echo "Creating simple DMG..."
+            hdiutil create -volname "Audio Transcription" -srcfolder "dist/AudioTranscription.app" -ov -format UDZO "AudioTranscription-macOS.dmg"
+          fi
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="dev-$(date +%Y%m%d-%H%M%S)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create ZIP archive (alternative download)
+        run: |
+          cd dist
+          zip -r ../AudioTranscription-macOS.zip AudioTranscription.app
+          cd ..
+
+      - name: Upload DMG as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioTranscription-macOS-DMG
+          path: AudioTranscription-macOS.dmg
+          retention-days: 30
+
+      - name: Upload ZIP as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioTranscription-macOS-ZIP
+          path: AudioTranscription-macOS.zip
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            AudioTranscription-macOS.dmg
+            AudioTranscription-macOS.zip
+          body: |
+            # Audio Transcription App ${{ steps.get_version.outputs.version }}
+
+            ## Download
+
+            **For macOS users:**
+            - Download `AudioTranscription-macOS.dmg` (Recommended)
+            - Or download `AudioTranscription-macOS.zip` (Alternative)
+
+            ## Installation
+
+            ### DMG Method (Recommended):
+            1. Download and open `AudioTranscription-macOS.dmg`
+            2. Drag **AudioTranscription.app** to your **Applications** folder
+            3. Eject the DMG
+            4. Launch from Applications
+
+            ### ZIP Method:
+            1. Download and extract `AudioTranscription-macOS.zip`
+            2. Move **AudioTranscription.app** to your **Applications** folder
+            3. Launch from Applications
+
+            ## First Launch
+
+            On first launch, macOS may show a security warning:
+            1. **Right-click** the app and select **Open**
+            2. Click **Open** in the confirmation dialog
+
+            Or go to **System Preferences > Security & Privacy** and click **Open Anyway**
+
+            ## Requirements
+
+            - macOS 10.15 (Catalina) or later
+            - **FFmpeg** (for audio enhancement): `brew install ffmpeg`
+            - **Deepgram API key** (configure in Settings tab)
+
+            ## Features
+
+            - 🎵 Audio file playback (MP3, WAV, M4A, OGG, FLAC, MP4)
+            - 🎙️ Audio enhancement/cleaning for school lessons
+            - 📝 Speech-to-text transcription using Deepgram AI
+            - 🇮🇹 Italian language support
+            - 💾 Export transcriptions as TXT and JSON
+
+            ## Support
+
+            For issues or questions, please [open an issue](https://github.com/${{ github.repository }}/issues).
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

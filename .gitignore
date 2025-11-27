@@ -1,0 +1,32 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# PyInstaller
+*.spec.backup
+*.manifest
+
+# Virtual environments
+.venv
+
+# Environment variables (contains API keys)
+.env
+
+# Project instructions
+CLAUDE.md
+
+# Audio/Video files
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.flac
+*.mp4
+
+# Transcription outputs
+*_transcript.json
+*_transcript.txt
