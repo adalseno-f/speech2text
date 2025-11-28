@@ -64,7 +64,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QUrl, QThread, Signal, QTimer
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
-from dotenv import load_dotenv, set_key, find_dotenv
 from deepgram import DeepgramClient
 from deepgram_utils import (
     transcribe_audio_file,
@@ -72,6 +71,7 @@ from deepgram_utils import (
     save_transcription
 )
 from clean_audio import clean_audio, check_ffmpeg_installed
+from config_utils import load_api_key, save_api_key, get_env_file_path
 
 
 class TranscriptionWorker(QThread):
@@ -239,9 +239,8 @@ class AudioPlayerTab(QWidget):
         self.player.playbackStateChanged.connect(self.handle_playback_state_changed)
 
     def load_api_key(self):
-        """Load API key from .env file"""
-        load_dotenv()
-        self.api_key = os.getenv("DEEPGRAM_API_KEY")
+        """Load API key from configuration file"""
+        self.api_key = load_api_key()
         self.update_transcribe_button_state()
 
         # Check if API key is missing and show warning after UI is ready
@@ -447,7 +446,7 @@ class AudioEnhancementTab(QWidget):
         voice_layout = QHBoxLayout()
         voice_layout.addWidget(QLabel("Speaker Voice:"))
         self.voice_combo = QComboBox()
-        self.voice_combo.addItems(["male", "female"])
+        self.voice_combo.addItems(["male", "female", "mixed"])
         voice_layout.addWidget(self.voice_combo)
         voice_layout.addStretch()
         layout.addLayout(voice_layout)
@@ -683,8 +682,7 @@ class SettingsTab(QWidget):
         self.api_key_input.setPlaceholderText("Enter your Deepgram API key")
 
         # Load current API key
-        load_dotenv()
-        current_key = os.getenv("DEEPGRAM_API_KEY", "")
+        current_key = load_api_key() or ""
         self.api_key_input.setText(current_key)
 
         layout.addWidget(self.api_key_input)
@@ -695,9 +693,10 @@ class SettingsTab(QWidget):
         layout.addWidget(save_btn)
 
         # Info label
+        env_file_path = get_env_file_path()
         info_label = QLabel(
             "Get your API key from: https://console.deepgram.com/\n\n"
-            "The API key will be saved to the .env file in the application directory."
+            f"The API key will be saved securely to:\n{env_file_path}"
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
@@ -706,24 +705,16 @@ class SettingsTab(QWidget):
         self.setLayout(layout)
 
     def save_api_key(self):
-        """Save API key to .env file"""
-        api_key = self.api_key_input.text().strip()
+        """Save API key to configuration file"""
+        api_key_value = self.api_key_input.text().strip()
 
-        if not api_key:
+        if not api_key_value:
             QMessageBox.warning(self, "Warning", "Please enter an API key")
             return
 
-        # Find or create .env file
-        env_file = find_dotenv()
-        if not env_file:
-            env_file = os.path.join(os.getcwd(), ".env")
-
         try:
-            set_key(env_file, "DEEPGRAM_API_KEY", api_key)
+            save_api_key(api_key_value)
             QMessageBox.information(self, "Success", "API key saved successfully!")
-
-            # Reload environment variables
-            load_dotenv(override=True)
 
             # Notify parent window to update
             if isinstance(self.parent().parent(), MainWindow):

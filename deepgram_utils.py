@@ -162,7 +162,7 @@ def print_transcription_summary(json_path, txt_path, formatted_text, model_name=
     print("-" * 50)
 
 
-def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", language="it", **kwargs):
+def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", language="it", timeout=600.0, **kwargs):
     """
     Transcribe an audio file using Deepgram API
 
@@ -171,6 +171,7 @@ def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", lang
         audio_file_path: Path to audio file
         model: Model to use (default: "nova-3")
         language: Language code (default: "it")
+        timeout: Timeout in seconds for the API request (default: 600 seconds = 10 minutes)
         **kwargs: Additional parameters for transcribe_file (e.g., smart_format, paragraphs, etc.)
 
     Returns:
@@ -187,10 +188,15 @@ def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", lang
     with open(audio_file_path, "rb") as audio:
         buffer_data = audio.read()
 
+    # Create a custom options dict with timeout
+    from deepgram import FileSource
+
+    # Configure timeout for the request
     response = deepgram_client.listen.v1.media.transcribe_file(
         request=buffer_data,
         model=model,
         language=language,
+        timeout=timeout,
         **kwargs
     )
 

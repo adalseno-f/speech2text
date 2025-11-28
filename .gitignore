@@ -13,6 +13,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Downloaded FFmpeg binaries
+bin/
+
 # Environment variables (contains API keys)
 .env
 
