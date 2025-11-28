@@ -269,99 +269,99 @@ jobs:
             AudioTranscription-Linux-FFmpeg-AppImage/AudioTranscription-Linux-FFmpeg-x86_64.AppImage
             AudioTranscription-Linux-FFmpeg-tarball/AudioTranscription-Linux-FFmpeg-x86_64.tar.gz
           body: |
-                # Audio Transcription App ${{ steps.get_version.outputs.version }}
+            # Audio Transcription App ${{ steps.get_version.outputs.version }}
 
-                ## Download
+            ## Download
 
-                **For macOS users:**
-                - Download `AudioTranscription-macOS-FFmpeg.dmg` (Recommended) - **Includes FFmpeg**
-                - Or download `AudioTranscription-macOS-FFmpeg.zip` (Alternative) - **Includes FFmpeg**
+            **For macOS users:**
+            - Download `AudioTranscription-macOS-FFmpeg.dmg` (Recommended) - **Includes FFmpeg**
+            - Or download `AudioTranscription-macOS-FFmpeg.zip` (Alternative) - **Includes FFmpeg**
 
-                **For Windows users:**
-                - Download `AudioTranscription-Windows-FFmpeg.zip` - **Includes FFmpeg**
+            **For Windows users:**
+            - Download `AudioTranscription-Windows-FFmpeg.zip` - **Includes FFmpeg**
 
-                **For Linux users:**
-                - Download `AudioTranscription-Linux-FFmpeg-x86_64.AppImage` (Recommended) - **Includes FFmpeg**
-                - Or download `AudioTranscription-Linux-FFmpeg-x86_64.tar.gz` (Alternative) - **Includes FFmpeg**
+            **For Linux users:**
+            - Download `AudioTranscription-Linux-FFmpeg-x86_64.AppImage` (Recommended) - **Includes FFmpeg**
+            - Or download `AudioTranscription-Linux-FFmpeg-x86_64.tar.gz` (Alternative) - **Includes FFmpeg**
 
-                ## Installation
+            ## Installation
 
-                ### macOS - DMG Method (Recommended):
-                1. Download and open `AudioTranscription-macOS-FFmpeg.dmg`
-                2. Drag **AudioTranscription.app** to your **Applications** folder
-                3. Eject the DMG
-                4. Launch from Applications
+            ### macOS - DMG Method (Recommended):
+            1. Download and open `AudioTranscription-macOS-FFmpeg.dmg`
+            2. Drag **AudioTranscription.app** to your **Applications** folder
+            3. Eject the DMG
+            4. Launch from Applications
 
-                ### macOS - ZIP Method:
-                1. Download and extract `AudioTranscription-macOS-FFmpeg.zip`
-                2. Move **AudioTranscription.app** to your **Applications** folder
-                3. Launch from Applications
+            ### macOS - ZIP Method:
+            1. Download and extract `AudioTranscription-macOS-FFmpeg.zip`
+            2. Move **AudioTranscription.app** to your **Applications** folder
+            3. Launch from Applications
 
-                ### Windows:
-                1. Download and extract `AudioTranscription-Windows-FFmpeg.zip`
-                2. Run **AudioTranscription.exe**
+            ### Windows:
+            1. Download and extract `AudioTranscription-Windows-FFmpeg.zip`
+            2. Run **AudioTranscription.exe**
 
-                ### Linux - AppImage Method (Recommended):
-                1. Download `AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
-                2. Make it executable: `chmod +x AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
-                3. Run: `./AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
+            ### Linux - AppImage Method (Recommended):
+            1. Download `AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
+            2. Make it executable: `chmod +x AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
+            3. Run: `./AudioTranscription-Linux-FFmpeg-x86_64.AppImage`
 
-                ### Linux - Tarball Method:
-                1. Download and extract `AudioTranscription-Linux-FFmpeg-x86_64.tar.gz`
-                2. Navigate to extracted folder
-                3. Run: `./AudioTranscription`
+            ### Linux - Tarball Method:
+            1. Download and extract `AudioTranscription-Linux-FFmpeg-x86_64.tar.gz`
+            2. Navigate to extracted folder
+            3. Run: `./AudioTranscription`
 
-                ## First Launch
+            ## First Launch
 
-                **macOS:** On first launch, macOS may show a security warning:
-                1. **Right-click** the app and select **Open**
-                2. Click **Open** in the confirmation dialog
+            **macOS:** On first launch, macOS may show a security warning:
+            1. **Right-click** the app and select **Open**
+            2. Click **Open** in the confirmation dialog
 
-                Or go to **System Preferences > Security & Privacy** and click **Open Anyway**
+            Or go to **System Preferences > Security & Privacy** and click **Open Anyway**
 
-                **Windows:** Windows Defender may show a warning. Click "More info" and then "Run anyway".
+            **Windows:** Windows Defender may show a warning. Click "More info" and then "Run anyway".
 
-                **Linux:** If the AppImage doesn't run, install FUSE: `sudo apt install fuse libfuse2`
+            **Linux:** If the AppImage doesn't run, install FUSE: `sudo apt install fuse libfuse2`
 
-                ## Requirements
+            ## Requirements
 
-                - **macOS**: 10.15 (Catalina) or later
-                - **Windows**: Windows 10 or later
-                - **Linux**: Most modern distributions (Ubuntu 20.04+, Fedora 34+, etc.)
-                - **FFmpeg**: Now bundled with the app! No separate installation needed.
-                - **Deepgram API key**: Required for transcription (configure in Settings tab)
+            - **macOS**: 10.15 (Catalina) or later
+            - **Windows**: Windows 10 or later
+            - **Linux**: Most modern distributions (Ubuntu 20.04+, Fedora 34+, etc.)
+            - **FFmpeg**: Now bundled with the app! No separate installation needed.
+            - **Deepgram API key**: Required for transcription (configure in Settings tab)
 
-                ## Features
+            ## Features
 
-                - 🎵 Audio file playback (MP3, WAV, M4A, OGG, FLAC, MP4)
-                - 🎙️ Audio enhancement/cleaning for school lessons (FFmpeg included!)
-                - 🔇 Click and keyboard noise removal
-                - 🎚️ Multiple speaker voice profiles (male, female, mixed)
-                - 📝 Speech-to-text transcription using Deepgram AI
-                - 🇮🇹 Italian language support
-                - 💾 Export transcriptions as TXT and JSON
-                - 🔧 Cross-platform: macOS, Windows, and Linux support
+            - 🎵 Audio file playback (MP3, WAV, M4A, OGG, FLAC, MP4)
+            - 🎙️ Audio enhancement/cleaning for school lessons (FFmpeg included!)
+            - 🔇 Click and keyboard noise removal
+            - 🎚️ Multiple speaker voice profiles (male, female, mixed)
+            - 📝 Speech-to-text transcription using Deepgram AI
+            - 🇮🇹 Italian language support
+            - 💾 Export transcriptions as TXT and JSON
+            - 🔧 Cross-platform: macOS, Windows, and Linux support
 
-                ## What's New in v0.1.1
+            ## What's New in v0.1.1
 
-                - ✅ Added "mixed" speaker voice option for recordings with both male and female voices
-                - ✅ Added click removal filter (removes clicking sounds)
-                - ✅ Added FFT denoiser for keyboard typing noise removal
-                - ✅ Linux AppImage support for easy Linux deployment
+            - ✅ Added "mixed" speaker voice option for recordings with both male and female voices
+            - ✅ Added click removal filter (removes clicking sounds)
+            - ✅ Added FFT denoiser for keyboard typing noise removal
+            - ✅ Linux AppImage support for easy Linux deployment
 
-                ## Previous Changes (v0.1.0 → v0.2.0)
+            ## Previous Changes (v0.1.0 → v0.2.0)
 
-                - ✅ Fixed API key storage issues on macOS (now uses proper Application Support directory)
-                - ✅ FFmpeg now bundled with the app - no separate installation needed!
-                - ✅ Improved FFmpeg detection (checks common installation paths)
-                - ✅ Increased timeout for long audio files (up to 10 minutes)
-                - ✅ Added Windows support
-                - ✅ Better error handling and user feedback
+            - ✅ Fixed API key storage issues on macOS (now uses proper Application Support directory)
+            - ✅ FFmpeg now bundled with the app - no separate installation needed!
+            - ✅ Improved FFmpeg detection (checks common installation paths)
+            - ✅ Increased timeout for long audio files (up to 10 minutes)
+            - ✅ Added Windows support
+            - ✅ Better error handling and user feedback
 
-                ## Support
+            ## Support
 
-                For issues or questions, please [open an issue](https://github.com/${{ github.repository }}/issues).
-              draft: false
-              prerelease: false
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            For issues or questions, please [open an issue](https://github.com/${{ github.repository }}/issues).
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
