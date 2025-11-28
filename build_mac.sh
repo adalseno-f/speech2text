@@ -1,11 +1,23 @@
 #!/bin/bash
 # Build script for macOS
 # This script should be run on a Mac computer
+#
+# Usage:
+#   ./build_mac.sh              # Build without bundled FFmpeg
+#   ./build_mac.sh --with-ffmpeg # Build with bundled FFmpeg
 
 set -e  # Exit on error
 
 echo "=== Audio Transcription App - macOS Build Script ==="
 echo ""
+
+# Parse command line arguments
+BUNDLE_FFMPEG=false
+if [[ "$1" == "--with-ffmpeg" ]]; then
+    BUNDLE_FFMPEG=true
+    echo "🎬 FFmpeg bundling enabled"
+    echo ""
+fi
 
 # Check if running on macOS
 if [[ "$OSTYPE" != "darwin"* ]]; then
@@ -23,14 +35,29 @@ fi
 
 echo "✓ Python found: $(python3 --version)"
 
-# Check if FFmpeg is installed
-if ! command -v ffmpeg &> /dev/null; then
-    echo "⚠️  FFmpeg is not installed."
-    echo "   Install it with: brew install ffmpeg"
-    echo "   The app will work but audio enhancement will be disabled."
+# Handle FFmpeg bundling
+if [ "$BUNDLE_FFMPEG" = true ]; then
     echo ""
+    echo "📥 Downloading FFmpeg for bundling..."
+    ./download_ffmpeg.sh
+
+    if [ -f "bin/ffmpeg" ]; then
+        echo "✓ FFmpeg downloaded and ready for bundling"
+    else
+        echo "❌ Failed to download FFmpeg"
+        exit 1
+    fi
 else
-    echo "✓ FFmpeg found: $(ffmpeg -version | head -n1)"
+    # Check if FFmpeg is installed on system
+    if ! command -v ffmpeg &> /dev/null; then
+        echo "⚠️  FFmpeg is not installed and not being bundled."
+        echo "   Install it with: brew install ffmpeg"
+        echo "   Or rebuild with: ./build_mac.sh --with-ffmpeg"
+        echo "   The app will work but audio enhancement will be disabled."
+        echo ""
+    else
+        echo "✓ System FFmpeg found: $(ffmpeg -version | head -n1)"
+    fi
 fi
 
 # Install/update dependencies

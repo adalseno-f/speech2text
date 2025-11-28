@@ -4,17 +4,30 @@ PyInstaller spec file for Audio Transcription App
 Build on macOS with: pyinstaller AudioTranscription.spec
 """
 
+import os
+from pathlib import Path
+
 block_cipher = None
+
+# Check if FFmpeg binary exists for bundling
+binaries_list = []
+ffmpeg_bin = Path('bin/ffmpeg')
+if ffmpeg_bin.exists():
+    print(f"Found FFmpeg at {ffmpeg_bin}, bundling with app...")
+    binaries_list.append((str(ffmpeg_bin), '.'))
+else:
+    print("FFmpeg not found in bin/. App will rely on system FFmpeg installation.")
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries_list,
     datas=[],
     hiddenimports=[
         'deepgram',
         'deepgram_utils',
         'clean_audio',
+        'config_utils',
         'PySide6.QtCore',
         'PySide6.QtGui',
         'PySide6.QtWidgets',
@@ -69,8 +82,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Audio Transcription',
         'CFBundleDisplayName': 'Audio Transcription',
-        'CFBundleVersion': '0.1.0',
-        'CFBundleShortVersionString': '0.1.0',
+        'CFBundleVersion': '0.1.1',
+        'CFBundleShortVersionString': '0.1.1',
         'NSHighResolutionCapable': True,
         'NSMicrophoneUsageDescription': 'This app needs access to audio files for transcription.',
     },

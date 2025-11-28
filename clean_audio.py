@@ -2,16 +2,80 @@ import subprocess
 from pathlib import Path
 import shutil
 import os
+import sys
+
+
+def get_ffmpeg_path() -> str | None:
+    """
+    Find the FFmpeg executable, checking common installation paths.
+
+    Returns:
+        str|None: Path to FFmpeg executable, or None if not found
+    """
+    # First, check if we have a bundled FFmpeg (in the app bundle)
+    if getattr(sys, 'frozen', False):
+        # Running as a bundled app
+        bundle_dir = Path(sys._MEIPASS)
+        bundled_ffmpeg = bundle_dir / "ffmpeg"
+        if bundled_ffmpeg.exists():
+            return str(bundled_ffmpeg)
+
+    # Check if ffmpeg is in PATH
+    ffmpeg_path = shutil.which("ffmpeg")
+    if ffmpeg_path:
+        return ffmpeg_path
+
+    # Check common installation paths on macOS
+    if sys.platform == "darwin":
+        common_paths = [
+            "/usr/local/bin/ffmpeg",           # Homebrew Intel Mac
+            "/opt/homebrew/bin/ffmpeg",        # Homebrew Apple Silicon
+            "/usr/bin/ffmpeg",                 # System installation
+            Path.home() / ".local/bin/ffmpeg", # User local installation
+        ]
+
+        for path in common_paths:
+            path_obj = Path(path)
+            if path_obj.exists() and path_obj.is_file():
+                return str(path_obj)
+
+    # Check common paths on Windows
+    elif sys.platform == "win32":
+        common_paths = [
+            "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
+            "C:\\ffmpeg\\bin\\ffmpeg.exe",
+            Path.home() / "ffmpeg/bin/ffmpeg.exe",
+        ]
+
+        for path in common_paths:
+            path_obj = Path(path)
+            if path_obj.exists() and path_obj.is_file():
+                return str(path_obj)
+
+    # Check common paths on Linux
+    else:
+        common_paths = [
+            "/usr/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
+            Path.home() / ".local/bin/ffmpeg",
+        ]
+
+        for path in common_paths:
+            path_obj = Path(path)
+            if path_obj.exists() and path_obj.is_file():
+                return str(path_obj)
+
+    return None
 
 
 def check_ffmpeg_installed() -> bool:
     """
-    Check if FFmpeg is installed and available in PATH.
+    Check if FFmpeg is installed and available.
 
     Returns:
         bool: True if FFmpeg is installed, False otherwise
     """
-    return shutil.which("ffmpeg") is not None
+    return get_ffmpeg_path() is not None
 
 
 def clean_audio(input_file: str, output_file: str | None = None, sex: str = "male", progress_callback=None) -> str:
@@ -21,11 +85,12 @@ def clean_audio(input_file: str, output_file: str | None = None, sex: str = "mal
     Args:
         input_file (str): Input audio file path
         output_file (str)|None: Output audio file path (default is None)
-        sex (str): Sex of speaker, either "male" or "female" (default is "male")
+        sex (str): Sex of speaker, either "male", "female", or "mixed" (default is "male")
         progress_callback (callable|None): Optional callback function called with progress messages
 
     Notes:
         - This function applies a high pass filter to remove rumble
+        - It removes clicks and keyboard typing noise
         - It reduces the harsh upper range with a low pass filter
         - It applies a mild dereverb hack to reduce echo
         - It applies compression to even out the audio levels
@@ -35,8 +100,8 @@ def clean_audio(input_file: str, output_file: str | None = None, sex: str = "mal
     Returns:
         str: Path to the output file
     """
-    
-    
+
+
     if progress_callback:
         progress_callback("Initializing audio enhancement...")
 
@@ -47,17 +112,22 @@ def clean_audio(input_file: str, output_file: str | None = None, sex: str = "mal
     if progress_callback:
         progress_callback(f"Processing audio file: {Path(input_file).name}")
 
+    # Set high-pass filter frequency based on speaker voice
     if sex == "female":
         cut = 110
-    else:
+    elif sex == "mixed":
+        cut = 100
+    else:  # male
         cut = 90
+
     # FFmpeg audio enhancement chain
     filters = [
+        "adeclick=t=2:w=10",                        # remove clicks (2ms threshold, 10ms window)
+        "afftdn=nf=-25",                            # FFT denoiser for background noise (keyboard typing)
         f"highpass=f={cut}",                        # remove rumble
         "lowpass=f=8000",                           # reduce harsh upper range
-        "areverse, highpass=f=200, areverse",       # mild dereverb hack
+        "areverse,highpass=f=200,areverse",         # mild dereverb hack
         "acompressor=threshold=-25dB:ratio=4",      # compression
-        "aecho=0.8:0.9:10:0.3",                     # optional: REMOVE if not needed
         "equalizer=f=300:t=h:width=200:g=-2",       # cut muddy area
         "equalizer=f=3000:t=h:width=2000:g=4",      # boost speech clarity
         "loudnorm=I=-16:TP=-1.5"                    # normalize
@@ -66,8 +136,13 @@ def clean_audio(input_file: str, output_file: str | None = None, sex: str = "mal
     if progress_callback:
         progress_callback("Applying audio filters...")
 
+    # Get the FFmpeg executable path
+    ffmpeg_exe = get_ffmpeg_path()
+    if not ffmpeg_exe:
+        raise RuntimeError("FFmpeg not found. Please install FFmpeg or specify its path.")
+
     cmd = [
-        "ffmpeg",
+        ffmpeg_exe,
         "-y",  # Overwrite output file without asking
         "-i", input_file,
         "-af", ",".join(filters),
