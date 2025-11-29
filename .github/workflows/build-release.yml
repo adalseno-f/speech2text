@@ -188,6 +188,17 @@ jobs:
           # Copy application files
           cp -r dist/AudioTranscription/* "$APP_DIR/usr/bin/"
 
+          # Copy icon file (look for common icon names)
+          if [ -f "audiotranscription.png" ]; then
+            cp audiotranscription.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/audiotranscription.png"
+            cp audiotranscription.png "$APP_DIR/audiotranscription.png"
+          elif [ -f "icon.png" ]; then
+            cp icon.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/audiotranscription.png"
+            cp icon.png "$APP_DIR/audiotranscription.png"
+          else
+            echo "Warning: No icon file found, AppImage will have no icon"
+          fi
+
           # Create desktop file
           cat > "$APP_DIR/usr/share/applications/audiotranscription.desktop" << 'EOF'
           [Desktop Entry]
