@@ -60,7 +60,7 @@ setup_stderr_filter()
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QSlider, QFileDialog, QTabWidget, QLineEdit,
-    QMessageBox, QProgressBar, QComboBox
+    QMessageBox, QProgressBar, QComboBox, QCheckBox
 )
 from PySide6.QtCore import Qt, QUrl, QThread, Signal, QTimer
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -71,6 +71,7 @@ from deepgram_utils import (
     save_transcription
 )
 from clean_audio import clean_audio, check_ffmpeg_installed
+from audio_splitter import split_audio_file, get_audio_duration
 from config_utils import load_api_key, save_api_key, get_env_file_path
 
 
@@ -79,12 +80,14 @@ class TranscriptionWorker(QThread):
     finished = Signal(bool, str)
     progress = Signal(str)
 
-    def __init__(self, api_key, audio_file, output_dir, model="whisper-large"):
+    def __init__(self, api_key, audio_file, output_dir, model="whisper-large", language="it", save_json=False):
         super().__init__()
         self.api_key = api_key
         self.audio_file = audio_file
         self.output_dir = output_dir
         self.model = model
+        self.language = language
+        self.save_json = save_json
 
     def run(self):
         try:
@@ -96,7 +99,7 @@ class TranscriptionWorker(QThread):
                 deepgram,
                 self.audio_file,
                 model=self.model,
-                language="it"
+                language=self.language
             )
 
             self.progress.emit("Processing transcription...")
@@ -109,14 +112,53 @@ class TranscriptionWorker(QThread):
             self.progress.emit("Saving transcription...")
             json_path, txt_path, _ = save_transcription(
                 response_dict,
-                base_filename=base_filename
+                base_filename=base_filename,
+                save_json=self.save_json
             )
 
-            self.finished.emit(True, f"Transcription saved:\n{txt_path}\n{json_path}")
+            # Build success message
+            if json_path:
+                message = f"Transcription saved:\n{txt_path}\n{json_path}"
+            else:
+                message = f"Transcription saved:\n{txt_path}"
+
+            self.finished.emit(True, message)
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
             self.finished.emit(False, f"Error during transcription:\n{str(e)}\n\nDetails:\n{error_details}")
+
+
+class AudioSplittingWorker(QThread):
+    """Worker thread for handling audio splitting without blocking UI"""
+    finished = Signal(bool, str, list)  # success, message, output_files
+    progress = Signal(str)
+
+    def __init__(self, input_file, output_dir):
+        super().__init__()
+        self.input_file = input_file
+        self.output_dir = output_dir
+
+    def run(self):
+        try:
+            def emit_progress(msg):
+                self.progress.emit(msg)
+
+            output_files = split_audio_file(
+                self.input_file,
+                output_dir=self.output_dir,
+                segment_length=1800,  # 30 minutes
+                overlap=30,  # 30 seconds
+                output_format="mp3",
+                progress_callback=emit_progress
+            )
+
+            message = f"Successfully split into {len(output_files)} segments"
+            self.finished.emit(True, message, output_files)
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            self.finished.emit(False, f"Error splitting audio:\n{str(e)}\n\nDetails:\n{error_details}", [])
 
 
 class AudioCleaningWorker(QThread):
@@ -124,11 +166,13 @@ class AudioCleaningWorker(QThread):
     finished = Signal(bool, str, str)  # success, message, output_file_path
     progress = Signal(str)
 
-    def __init__(self, input_file, output_file, sex="male"):
+    def __init__(self, input_file, output_file, sex="male", remove_keyboard_noise=False, voice_isolation=False):
         super().__init__()
         self.input_file = input_file
         self.output_file = output_file
         self.sex = sex
+        self.remove_keyboard_noise = remove_keyboard_noise
+        self.voice_isolation = voice_isolation
 
     def run(self):
         try:
@@ -139,6 +183,8 @@ class AudioCleaningWorker(QThread):
                 self.input_file,
                 self.output_file,
                 sex=self.sex,
+                remove_keyboard_noise=self.remove_keyboard_noise,
+                voice_isolation=self.voice_isolation,
                 progress_callback=emit_progress
             )
 
@@ -224,6 +270,23 @@ class AudioPlayerTab(QWidget):
         model_layout.addStretch()
         layout.addLayout(model_layout)
 
+        # Language selection
+        language_layout = QHBoxLayout()
+        language_layout.addWidget(QLabel("Audio Language:"))
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(["Italian (it)", "English (en)"])
+        self.language_combo.setCurrentIndex(0)  # Default to Italian
+        language_layout.addWidget(self.language_combo)
+
+        # Save JSON checkbox
+        self.save_json_checkbox = QCheckBox("Save JSON (debug)")
+        self.save_json_checkbox.setChecked(False)
+        self.save_json_checkbox.setToolTip("Save detailed JSON transcription file (for debugging)")
+        language_layout.addWidget(self.save_json_checkbox)
+
+        language_layout.addStretch()
+        layout.addLayout(language_layout)
+
         # Transcription button
         self.transcribe_btn = QPushButton("Transcribe Audio")
         self.transcribe_btn.clicked.connect(self.start_transcription)
@@ -283,7 +346,121 @@ class AudioPlayerTab(QWidget):
                 self.improve_audio_btn.setEnabled(False)
                 self.improve_audio_btn.setToolTip("FFmpeg is not installed")
 
+            # Check audio duration and warn if > 30 minutes
+            self.check_audio_duration(file_path)
+
             self.update_transcribe_button_state()
+
+    def check_audio_duration(self, file_path):
+        """Check audio duration and warn if longer than 30 minutes"""
+        try:
+            duration_seconds = get_audio_duration(file_path)
+
+            if duration_seconds is None:
+                return  # Could not get duration
+
+            duration_minutes = duration_seconds / 60
+
+            # Warn if longer than 30 minutes (with buffer to avoid warning on exactly 30 min segments)
+            if duration_minutes > 30.5:
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setWindowTitle("Long Audio File")
+                msg_box.setText(
+                    f"This audio file is {duration_minutes:.1f} minutes long.\n\n"
+                    "Deepgram may truncate or timeout on very long files."
+                )
+                msg_box.setInformativeText(
+                    "Would you like to split it into shorter segments?\n\n"
+                    "The file will be split into ~30-minute segments with 30-second overlap "
+                    "for better transcription results."
+                )
+
+                # Add custom buttons
+                split_button = msg_box.addButton("Split Audio", QMessageBox.ActionRole)
+                cancel_button = msg_box.addButton("Continue Anyway", QMessageBox.RejectRole)
+
+                msg_box.exec()
+
+                if msg_box.clickedButton() == split_button:
+                    self.split_current_audio()
+
+        except Exception:
+            # Silently fail if errors occur
+            pass
+
+    def split_current_audio(self):
+        """Split current audio file into segments"""
+        if not self.audio_file:
+            return
+
+        # Ask user to select destination folder
+        desktop_dir = str(Path.home() / "Desktop")
+        output_dir = QFileDialog.getExistingDirectory(
+            self,
+            "Select Folder for Audio Segments",
+            desktop_dir,
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+        )
+
+        # If user cancelled the dialog, return
+        if not output_dir:
+            return
+
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create progress dialog
+        self.split_progress_dialog = QMessageBox(self)
+        self.split_progress_dialog.setIcon(QMessageBox.Information)
+        self.split_progress_dialog.setWindowTitle("Splitting Audio")
+        self.split_progress_dialog.setText("Splitting audio file into segments...")
+        self.split_progress_dialog.setStandardButtons(QMessageBox.NoButton)
+        self.split_progress_dialog.show()
+
+        # Start worker thread
+        self.splitting_worker = AudioSplittingWorker(self.audio_file, output_dir)
+        self.splitting_worker.finished.connect(self.splitting_finished)
+        self.splitting_worker.progress.connect(self.splitting_progress)
+        self.splitting_worker.start()
+
+    def splitting_progress(self, message):
+        """Update splitting progress"""
+        if hasattr(self, 'split_progress_dialog'):
+            self.split_progress_dialog.setInformativeText(message)
+
+    def splitting_finished(self, success, message, output_files):
+        """Handle splitting completion"""
+        # Close and delete progress dialog
+        if hasattr(self, 'split_progress_dialog'):
+            self.split_progress_dialog.close()
+            self.split_progress_dialog.deleteLater()
+            delattr(self, 'split_progress_dialog')
+
+        # Process events to ensure dialog is closed
+        from PySide6.QtCore import QCoreApplication
+        QCoreApplication.processEvents()
+
+        if success:
+            # Show success message with file list
+            files_list = "\n".join([f"  • {Path(f).name}" for f in output_files])
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setWindowTitle("Audio Split Complete")
+            msg_box.setText(f"{message}")
+            msg_box.setInformativeText(
+                f"Created segments:\n{files_list}\n\n"
+                f"Location: {Path(output_files[0]).parent}\n\n"
+                "You can now transcribe each segment separately."
+            )
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec()
+        else:
+            QMessageBox.critical(
+                self,
+                "Splitting Failed",
+                message
+            )
 
     def toggle_play_pause(self):
         """Toggle between play and pause"""
@@ -364,8 +541,12 @@ class AudioPlayerTab(QWidget):
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
-        # Get selected model
+        # Get selected model, language, and save options
         selected_model = self.model_combo.currentText()
+        # Extract language code from "Language (code)" format
+        language_text = self.language_combo.currentText()
+        language_code = language_text.split("(")[1].rstrip(")")  # Extract "it" from "Italian (it)"
+        save_json = self.save_json_checkbox.isChecked()
 
         # Disable button during transcription
         self.transcribe_btn.setEnabled(False)
@@ -377,7 +558,9 @@ class AudioPlayerTab(QWidget):
             self.api_key,
             self.audio_file,
             output_dir,
-            selected_model
+            selected_model,
+            language_code,
+            save_json
         )
         self.transcription_worker.finished.connect(self.transcription_finished)
         self.transcription_worker.progress.connect(self.transcription_progress)
@@ -450,6 +633,15 @@ class AudioEnhancementTab(QWidget):
         voice_layout.addWidget(self.voice_combo)
         voice_layout.addStretch()
         layout.addLayout(voice_layout)
+
+        # Enhancement options checkboxes
+        self.keyboard_noise_checkbox = QCheckBox("Remove keyboard typing noise (aggressive filtering)")
+        self.keyboard_noise_checkbox.setToolTip("Apply aggressive filters to remove keyboard typing sounds. Use only if keyboard noise is present.")
+        layout.addWidget(self.keyboard_noise_checkbox)
+
+        self.voice_isolation_checkbox = QCheckBox("Enhance voice isolation (reduce background noise)")
+        self.voice_isolation_checkbox.setToolTip("Use AI-powered dialogue enhancement to isolate voice and reduce background noise.")
+        layout.addWidget(self.voice_isolation_checkbox)
 
         # Process button
         self.process_btn = QPushButton("Start Audio Enhancement")
@@ -569,8 +761,10 @@ class AudioEnhancementTab(QWidget):
             if output_path_obj.suffix.lower() != '.mp3':
                 output_path = str(output_path_obj.with_suffix('.mp3'))
 
-        # Get voice type
+        # Get voice type and enhancement settings
         sex = self.voice_combo.currentText()
+        remove_keyboard_noise = self.keyboard_noise_checkbox.isChecked()
+        voice_isolation = self.voice_isolation_checkbox.isChecked()
 
         # Disable button during processing
         self.process_btn.setEnabled(False)
@@ -581,7 +775,9 @@ class AudioEnhancementTab(QWidget):
         self.cleaning_worker = AudioCleaningWorker(
             self.input_file,
             output_path,
-            sex=sex
+            sex=sex,
+            remove_keyboard_noise=remove_keyboard_noise,
+            voice_isolation=voice_isolation
         )
         self.cleaning_worker.finished.connect(self.cleaning_finished)
         self.cleaning_worker.progress.connect(self.cleaning_progress)

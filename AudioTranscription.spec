@@ -82,8 +82,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Audio Transcription',
         'CFBundleDisplayName': 'Audio Transcription',
-        'CFBundleVersion': '0.1.2',
-        'CFBundleShortVersionString': '0.1.2',
+        'CFBundleVersion': '0.1.3',
+        'CFBundleShortVersionString': '0.1.3',
         'NSHighResolutionCapable': True,
         'NSMicrophoneUsageDescription': 'This app needs access to audio files for transcription.',
     },

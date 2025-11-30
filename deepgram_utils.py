@@ -116,25 +116,29 @@ def extract_formatted_text(response_dict):
     return formatted_text
 
 
-def save_transcription(response_dict, base_filename="transcript"):
+def save_transcription(response_dict, base_filename="transcript", save_json=True):
     """
-    Save transcription to both JSON and TXT files
+    Save transcription to TXT file and optionally JSON file
 
     Args:
         response_dict: Structured response dictionary from extract_response_dict()
         base_filename: Base name for output files (without extension)
+        save_json: Whether to save JSON file (default True for backwards compatibility)
 
     Returns:
         tuple: (json_path, txt_path, formatted_text)
+               json_path will be None if save_json is False
     """
-    json_path = f"{base_filename}.json"
+    json_path = None
     txt_path = f"{base_filename}.txt"
 
-    # Save JSON
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(response_dict, f, indent=4, ensure_ascii=False)
+    # Save JSON only if requested
+    if save_json:
+        json_path = f"{base_filename}.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(response_dict, f, indent=4, ensure_ascii=False)
 
-    # Extract and save formatted text
+    # Extract and save formatted text (always)
     formatted_text = extract_formatted_text(response_dict)
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(formatted_text)
@@ -162,7 +166,7 @@ def print_transcription_summary(json_path, txt_path, formatted_text, model_name=
     print("-" * 50)
 
 
-def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", language="it", timeout=600.0, **kwargs):
+def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", language="it", **kwargs):
     """
     Transcribe an audio file using Deepgram API
 
@@ -171,7 +175,6 @@ def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", lang
         audio_file_path: Path to audio file
         model: Model to use (default: "nova-3")
         language: Language code (default: "it")
-        timeout: Timeout in seconds for the API request (default: 600 seconds = 10 minutes)
         **kwargs: Additional parameters for transcribe_file (e.g., smart_format, paragraphs, etc.)
 
     Returns:
@@ -188,15 +191,11 @@ def transcribe_audio_file(deepgram_client, audio_file_path, model="nova-3", lang
     with open(audio_file_path, "rb") as audio:
         buffer_data = audio.read()
 
-    # Create a custom options dict with timeout
-    from deepgram import FileSource
-
-    # Configure timeout for the request
+    # Transcribe the audio file
     response = deepgram_client.listen.v1.media.transcribe_file(
         request=buffer_data,
         model=model,
         language=language,
-        timeout=timeout,
         **kwargs
     )
 

@@ -11,13 +11,19 @@ A cross-platform desktop application that enhances audio quality and transcribes
 ## Features
 
 - **Audio Playback**: Support for MP3, WAV, M4A, OGG, FLAC, and MP4 files
-- **Audio Enhancement**: Clean and improve audio quality with noise removal
-  - Click and keyboard noise removal
+- **Audio Enhancement**: Clean and improve audio quality with advanced noise removal
+  - Optional keyboard typing noise removal (aggressive filtering)
+  - Optional voice isolation using AI-powered dialogue enhancement
   - Multiple speaker voice profiles (male, female, mixed)
   - FFmpeg bundled with the app
-- **AI Transcription**: Speech-to-text using Deepgram AI (supports Italian)
+- **AI Transcription**: Speech-to-text using Deepgram AI
+  - Multi-language support (Italian, English)
+  - Multiple transcription models (nova-3, nova-2, whisper-large)
+  - Optional JSON export for debugging
+  - Automatic warning for long audio files (>30 minutes)
+  - **Built-in audio splitter** with one-click splitting from warning dialog
 - **Audio Controls**: Play, pause, and seek through audio files
-- **Export**: Save transcriptions as TXT and JSON files
+- **Export**: Save transcriptions as TXT files, optionally with detailed JSON
 - **Secure**: API keys stored locally in platform-specific config directory
 - **Cross-Platform**: Available for macOS, Windows, and Linux
 
@@ -79,36 +85,92 @@ The audio enhancement feature is perfect for cleaning up school lessons or recor
    - **Male**: Optimized for male voices
    - **Female**: Optimized for female voices
    - **Mixed**: For recordings with both male and female speakers
-4. Customize output location (optional)
-5. Click "Start Audio Enhancement"
-6. Preview the enhanced audio
-7. Click "Accept Enhancement" to use the cleaned audio
+4. Select enhancement options:
+   - **Remove keyboard typing noise**: Enable for aggressive filtering of keyboard sounds
+   - **Enhance voice isolation**: Enable to isolate voice and reduce background noise using AI
+5. Customize output location (optional)
+6. Click "Start Audio Enhancement"
+7. Preview the enhanced audio
+8. Click "Accept Enhancement" to use the cleaned audio
 
 **Enhancement Features**:
-- Click and pop removal
-- Keyboard typing noise reduction (FFT denoiser)
-- Rumble and low-frequency noise removal
-- Echo reduction
-- Speech clarity enhancement
-- Audio level normalization
+- **Standard Processing** (always applied):
+  - Rumble and low-frequency noise removal
+  - Echo reduction
+  - Speech clarity enhancement with EQ
+  - Audio level normalization
+  - Gentle FFT denoising
+- **Optional Keyboard Noise Removal**:
+  - Aggressive FFT denoiser
+  - Transient click removal
+  - Noise gate
+  - Tighter frequency filtering
+- **Optional Voice Isolation**:
+  - AI-powered dialogue enhancement (dialoguenhance)
+  - Dynamic speech normalization (speechnorm)
+  - Background noise reduction
+
+> [!WARNING]  
+> The filters are applied sequentially, thus, if you select them all, they may take a lot of time
+> depending on the CPU speed.\
+> Be patient, preview the results and, in case, apply a different combination until the voice is clear.
 
 **Output**: High-quality MP3 files with professional audio enhancement.
+
+### Splitting Long Audio Files
+
+For audio files longer than 30 minutes, the app can automatically split them into manageable segments:
+
+1. **Select a long audio file** (>30 minutes)
+2. **Warning dialog appears** automatically
+3. **Click "Split Audio"** button
+4. **Choose destination folder** for segments
+5. **Wait for splitting** to complete (shows progress)
+6. **Segments created**:
+   - Named: `filename_part01.mp3`, `filename_part02.mp3`, etc.
+   - Each segment ~30 minutes or less
+   - 30-second overlap between segments for transcription continuity
+
+**Features**:
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **Automatic**: One-click splitting from warning dialog
+- **Smart overlap**: 30 seconds between segments ensures no content is lost
+- **Progress tracking**: Live progress updates during splitting
+- **Batch-ready**: All segments ready for individual transcription
+
+**Command-line alternative**:
+```bash
+# Python script (cross-platform)
+python audio_splitter.py long_audio.mp3 ./segments
+
+# Bash script (Unix/Linux/macOS)
+./split_audio.sh long_audio.mp3 -d ./segments
+```
 
 ### Transcription
 
 1. Ensure you have a Deepgram API key configured
 2. Select an audio file (or use an enhanced version)
-3. Choose transcription model:
-   - `nova-3` - Latest, most accurate (recommended)
-   - `nova-2` - Fast and accurate
-   - `whisper-large` - Alternative model
+3. Choose transcription settings:
+   - **Model**:
+     - `nova-3` - Latest, most accurate (recommended)
+     - `nova-2` - Fast and accurate
+     - `whisper-large` - Alternative model
+   - **Language**:
+     - Italian (it) - Default
+     - English (en)
+   - **Save JSON**: Optional, for debugging (unchecked by default)
 4. Click "Transcribe Audio"
 5. Choose destination folder
 6. Wait for transcription to complete
 
+**Notes**:
+- Files longer than 30 minutes will trigger a warning (Deepgram may timeout or truncate)
+- Consider splitting long recordings into 20-30 minute segments
+
 **Output**:
-- `.txt` file with plain text transcription
-- `.json` file with detailed metadata
+- `.txt` file with formatted transcription (always)
+- `.json` file with detailed metadata (only if "Save JSON" is checked)
 
 ## Development
 
@@ -190,6 +252,10 @@ speech2text/
 ├── clean_audio.py          # Audio enhancement module
 ├── deepgram_utils.py       # Transcription utilities
 ├── config_utils.py         # Configuration management
+├── audio_splitter.py       # Audio splitting module (cross-platform)
+├── split_audio.sh          # Audio splitting script (Unix/Linux/macOS)
+├── bump_version.sh         # Version bump utility script
+├── __version__.py          # Version information
 ├── AudioTranscription.spec # PyInstaller configuration
 ├── build_mac.sh           # macOS build script
 ├── build_linux.sh         # Linux build script
@@ -233,7 +299,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [x] Linux support
 - [x] Click and keyboard noise removal
 - [x] Multiple speaker voice profiles
-- [ ] Additional language support
+- [x] Additional language support (Italian, English)
+- [x] Voice isolation and enhancement
+- [ ] More language support (Spanish, French, German, etc.)
 - [ ] Batch processing
 - [ ] Real-time transcription
 - [ ] Speaker diarization

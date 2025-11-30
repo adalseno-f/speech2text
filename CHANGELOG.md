@@ -2,6 +2,57 @@
 
 All notable changes to the Audio Transcription App will be documented in this file.
 
+## [v0.1.3] - 2025-11-30
+
+### Added
+- **Voice Isolation**: Added optional voice isolation/enhancement using FFmpeg's `dialoguenhance` filter
+  - New checkbox: "Enhance voice isolation (reduce background noise)"
+  - Uses AI-powered dialogue enhancement to isolate voice from background noise
+  - Includes dynamic speech normalization (`speechnorm`)
+  - Can be used independently or combined with keyboard noise removal
+
+- **Language Selection**: Added language dropdown for transcription
+  - Support for Italian (it) and English (en)
+  - Default language: Italian
+  - Language code is now passed to Deepgram API instead of being hardcoded
+
+- **Optional JSON Export**: Added checkbox to save JSON transcription file
+  - New checkbox: "Save JSON (debug)" next to language selection
+  - Default: unchecked (only saves TXT file)
+  - JSON file useful for debugging and detailed analysis
+
+- **Long Audio Warning & Auto-Split**: Added automatic duration check for audio files
+  - Warns users if audio file is longer than 30 minutes
+  - **"Split Audio" button** in warning dialog to automatically split the file
+  - Cross-platform audio splitter (works on Windows, macOS, Linux)
+  - Splits into ~30-minute segments with 30-second overlap
+  - Background processing with progress dialog
+  - Uses `ffprobe` to get accurate duration
+  - Helps prevent Deepgram timeouts on very long recordings
+  - New `audio_splitter.py` module for programmatic use
+  - New `split_audio.sh` bash script for command-line use (Unix/Linux/macOS)
+
+### Changed
+- **Keyboard Noise Removal**: Made keyboard noise removal optional via checkbox
+  - New checkbox: "Remove keyboard typing noise (aggressive filtering)"
+  - Default: unchecked (uses gentle noise reduction)
+  - When enabled, applies more aggressive FFT denoiser, click removal, noise gate, and tighter frequency filters
+  - Gives users control over noise reduction intensity
+
+- **Audio Enhancement Pipeline**: Updated filter chain to support conditional processing:
+  1. High-pass filter (rumble removal)
+  2. Keyboard noise removal (optional, aggressive)
+  3. Voice isolation (optional, dialoguenhance + speechnorm)
+  4. Dereverb
+  5. Compression
+  6. EQ
+  7. Normalization
+
+### Fixed
+- **Deepgram SDK Compatibility**: Fixed import error with Deepgram SDK v5+
+  - Removed unused `FileSource` import that was causing ImportError
+  - Removed unsupported `timeout` parameter from `transcribe_file()` call
+
 ## [v0.1.1] - 2025-11-29
 
 ### Added
